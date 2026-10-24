@@ -57,3 +57,22 @@ class ParlayType(str, Enum):
     SAME_MATCH = "SAME_MATCH"
     MULTI_MATCH = "MULTI_MATCH"
     HYBRID = "HYBRID"
+
+
+class SourceCategory(str, Enum):
+    """Source quality and authority tier."""
+    OFFICIAL_ANNOUNCEMENT = "OFFICIAL_ANNOUNCEMENT"  # Official league, federation, club, or competition
+    LICENSED_DATA = "LICENSED_DATA"                  # Licensed / documented statistical providers
+    ESTABLISHED_DATABASE = "ESTABLISHED_DATABASE"    # Established databases and reputable sports publications
+    SECONDARY_REPORTING = "SECONDARY_REPORTING"      # Secondary sports reporting / general media
+    UNVERIFIED_COMMUNITY = "UNVERIFIED_COMMUNITY"    # Social media, fan forums (requires corroboration)
+
+
+class VerificationStatus(str, Enum):
+    """Evidence verification and corroboration state."""
+    CONFIRMED = "CONFIRMED"            # Officially confirmed by club/league or verified by multi-source consensus
+    REPORTED = "REPORTED"              # Reputable secondary report; not yet official
+    MODEL_ASSUMPTION = "MODEL_ASSUMPTION"  # Parameter assumption / prior
+    UNVERIFIED = "UNVERIFIED"          # Uncorroborated single source
+    UNAVAILABLE = "UNAVAILABLE"        # Fact explicitly investigated and found unavailable
+

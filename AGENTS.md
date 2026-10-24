@@ -2,10 +2,10 @@
 
 ## 1. Project Philosophy & Core Mandates
 - **Domain**: High-performance, probabilistic Football Analytics & Odds Intelligence Engine.
-- **LLM Role**: Grok (official xAI API, Responses API, configurable model e.g. `grok-4.7`). Grok handles intent extraction, tool planning, reasoning over structured outputs, and evidence-backed synthesis.
-- **Deterministic Separation**: Grok NEVER invents data, probabilities, odds, or statistical values. All mathematical calculations, probability models, odds normalisation, expected-value metrics, and parlay generation are performed strictly by the deterministic Python application layer.
+- **LLM Role**: Groq (official Groq API, configurable model e.g. `openai/gpt-oss-120b`). Groq handles intent extraction, tool planning, reasoning over structured outputs, built-in browser search, and evidence-backed synthesis.
+- **Deterministic Separation**: Groq NEVER invents data, probabilities, odds, or statistical values. All mathematical calculations, probability models, odds normalisation, expected-value metrics, and parlay generation are performed strictly by the deterministic Python application layer.
 - **Fail-Safe & Fallback-Free**: If data or credentials are missing or uncalibrated, explicitly report `INSUFFICIENT_DATA` or abstain. Never silently invent numbers or fall back to an unverified secondary LLM.
-- **Security & Privacy**: Never log or commit API keys (`XAI_API_KEY`, etc.). Passwords and credentials must reside only in environment variables. Do not execute arbitrary user or LLM code.
+- **Security & Privacy**: Never log or commit API keys (`GROQ_API_KEY`, etc.). Passwords and credentials must reside only in environment variables. Do not execute arbitrary user or LLM code.
 - **No Betting Execution**: This is an intelligence and analytics platform. No betting placement, deposit, withdrawal, or sportsbook account actions are supported. Include responsible gambling advisories.
 
 ## 2. Directory Layout & Architecture

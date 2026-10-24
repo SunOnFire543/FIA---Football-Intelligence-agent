@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from app.agent.tool_registry import ToolRegistry
+from app.agent.web_research import WebResearchEngine
+from app.config.settings import settings
 from app.data.coverage import default_coverage_registry
 from app.data.providers import get_football_provider
 from app.evaluation.backtesting import WalkForwardBacktester
@@ -321,6 +323,11 @@ class FootballIntelligenceTools:
             p5 = ParlayCandidate(**parlays["parlay_5_leg"])
         p10 = ParlayCandidate(**parlays["parlay_10_leg"])
 
+        research = WebResearchEngine.get_grounded_research(
+            fixture_id=fixture_id,
+            data_mode=settings.data_mode,
+        )
+
         evidence = ResultValidator.verify_analysis(
             fixture_id=fixture_id,
             competition_id="PL",
@@ -329,6 +336,8 @@ class FootballIntelligenceTools:
             parlay_5=p5,
             parlay_10=p10,
             data_cutoff=datetime.now(timezone.utc),
+            web_sources=research.sources,
+            research_records=[research],
         )
         return evidence.model_dump(mode="json")
 
@@ -337,6 +346,20 @@ class FootballIntelligenceTools:
         hist = self.data_provider.get_team_history("ARS", limit=16)
         summary = self.backtester.run_backtest(hist, start_index=4)
         return summary.model_dump()
+
+    # Tool 18: research_match_context
+    def research_match_context(self, fixture_id: str, topic: str = "all") -> Dict[str, Any]:
+        """Retrieve verified contextual web research (injuries, lineups, referee, and tactical news)."""
+        resolved = self.data_provider.resolve_fixture(fixture_id)
+        home = resolved[0].home_team_name if resolved else "Arsenal FC"
+        away = resolved[0].away_team_name if resolved else "Chelsea FC"
+        rec = WebResearchEngine.get_grounded_research(
+            fixture_id=fixture_id,
+            home_team=home,
+            away_team=away,
+            data_mode=settings.data_mode,
+        )
+        return rec.model_dump(mode="json")
 
 
 def register_all_tools(registry: ToolRegistry, tools_instance: FootballIntelligenceTools) -> None:
@@ -558,4 +581,19 @@ def register_all_tools(registry: ToolRegistry, tools_instance: FootballIntellige
             "properties": {"competition_id": {"type": "string", "default": "PL"}},
         },
         handler=tools_instance.get_model_evaluation,
+    )
+
+    # 18. research_match_context
+    registry.register(
+        name="research_match_context",
+        description="Retrieve verified contextual web research (injuries, lineup confirmations, referee appointments, manager updates, and source provenance) for a fixture.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "fixture_id": {"type": "string", "description": "Fixture identifier"},
+                "topic": {"type": "string", "default": "all", "description": "Research topic e.g. team_news, lineups, referee"},
+            },
+            "required": ["fixture_id"],
+        },
+        handler=tools_instance.research_match_context,
     )

@@ -1,76 +1,70 @@
-# Fetch.ai, Agentverse & ASI:One Integration Setup
+# Fetch.ai, uAgents & Agentverse Integration Guide
 
-## 1. Hackathon Overview
-This application satisfies the **Fetch-A-Thon 3.0** requirements:
-- **Agentverse Registration**: Discoverable agent profile with defined capabilities.
-- **Agent Chat Protocol (ACP)**: Standardized messaging protocol for communication.
-- **ASI:One Native Flow**: Completes multi-step reasoning, tool execution, and analytical reports entirely within an ASI:One chat conversation.
+## 1. Hackathon Status & Scope
+- **uAgents Framework**: **IMPLEMENTED & TESTED WITH MOCKS** (`app/fetch/uagent_service.py`).
+- **Agent Chat Protocol (ACP)**: **IMPLEMENTED & TESTED WITH LOCAL SIMULATION** (`app/fetch/acp_server.py`).
+- **Agentverse Registration**: **REGISTRATION REQUIRED** (Awaiting user Agentverse account setup and mailbox key).
+- **ASI:One Live Discoverability**: **NOT VERIFIED** (Pending Agentverse public deployment).
 
 ---
 
-## 2. Agent Discoverability Manifest
-The agent exports its discoverability manifest at startup or via CLI:
+## 2. Running the uAgent Locally
+The application instantiates an authentic Fetch.ai `uagents.Agent`:
+
 ```bash
-python -m app.main manifest
+python -m app.main run-uagent
 ```
 
-Manifest JSON:
-```json
-{
-  "name": "FootballIntelligenceAgent",
-  "version": "1.0.0",
-  "description": "Grok-powered Football Analytics and Odds Intelligence Agent. Provides probabilistic Dixon-Coles goal modeling, multi-bookmaker odds comparison, statistical expected value (EV), and 5-leg & 10-leg parlay intelligence.",
-  "protocols": [
-    "agent-chat-protocol/v1",
-    "uagents/v1"
-  ],
-  "supported_competitions": [
-    "Premier League (PL)",
-    "La Liga (PD)",
-    "UEFA Champions League (CL)"
-  ],
-  "supported_markets": [
-    "Match Result (1X2)",
-    "Double Chance",
-    "Over / Under Total Goals (0.5 to 4.5)",
-    "Both Teams To Score (BTTS)",
-    "Player Shots & Shots On Target (SOT)",
-    "Anytime Goalscorer",
-    "Total Match Corners",
-    "Total Cards & Fouls"
-  ],
-  "endpoints": {
-    "acp": "/acp/message",
-    "health": "/health"
-  }
-}
+Output:
+```text
+[+] Starting uAgents runtime for FootballIntelligenceAgent...
+[+] uAgent instantiated with address: agent1qtldj59wykss0ygez49dntapnexx6aq204zz9nkjc4rutepj7xj0ksmk5v4
+[+] Registered protocols: ['AgentChatProtocol']
+[+] Starting agent event loop...
 ```
+
+The agent generates a unique, deterministic cryptographic address based on `AGENT_SEED` and registers `FootballIntelligenceProtocol` for message exchange.
 
 ---
 
-## 3. Agentverse Registration Instructions
-1. Navigate to [Agentverse](https://agentverse.ai/) and log in with your credentials.
-2. Select **My Agents** -> **Create Agent**.
-3. Choose **Hosted Agent** or **Local Agent Proxy** pointing to your public endpoint or ngrok tunnel (`http://<your-host>:8000/submit`).
-4. Enter `AGENT_NAME`: `FootballIntelligenceAgent`.
-5. Copy your Agentverse API Key into your `.env`:
-   ```bash
-   AGENTVERSE_API_KEY=your_key_here
-   AGENT_SEED="football_intelligence_engine_secure_seed"
-   ```
-6. Set the Agent Chat Protocol (ACP) handler endpoint to `/acp/message`.
-7. Publish the agent to make it discoverable in **ASI:One**.
+## 3. Local ACP Message Simulation
+You can simulate the Agent Chat Protocol message loop locally before connecting to live Agentverse:
+
+```bash
+python -m app.main acp-query "Analyse the next Arsenal match"
+```
+
+This executes a complete local ACP simulation (`ACPMessageRequest` -> Pipeline Execution -> `ACPMessageResponse`), returning a formatted intelligence report.
 
 ---
 
-## 4. ASI:One Verification Steps
-1. Open the [ASI:One](https://asi.one/) agent interface.
-2. Search for `FootballIntelligenceAgent`.
-3. Start a chat and send the test prompt:
-   > "Analyse the next Arsenal match using historical statistics, compare current bookmaker odds, and generate a five-leg and ten-leg parlay if the data supports them."
-4. Verify that:
-   - Match expected goals are computed.
-   - 1X2 and Over/Under probabilities are generated.
-   - Cross-bookmaker odds and positive EV opportunities are identified.
-   - Exactly 5-leg and 10-leg candidates are constructed with joint probabilities.
-   - The result verification audit ID (`EVID_...`) is presented.
+## 4. Manual Steps for Agentverse Deployment & ASI:One Discovery
+To deploy this agent live on the Agentverse network:
+
+1. **Create an Agentverse Account**:
+   - Sign up at [Agentverse](https://agentverse.ai/).
+2. **Obtain an Agent Mailbox Key**:
+   - Navigate to **Agentverse -> Mailroom**.
+   - Create a new mailbox for `agent1q...` (the address printed by `python -m app.main run-uagent`).
+   - Copy the generated mailbox API key.
+3. **Configure Environment**:
+   - In `.env`, set:
+     ```bash
+     AGENTVERSE_API_KEY=<your_agentverse_mailbox_key>
+     AGENT_SEED="your_chosen_secret_seed_phrase"
+     ```
+4. **Start the Mailbox Agent**:
+   - Run `python -m app.main run-uagent`.
+   - The agent will connect to the Agentverse mailbox over WebSocket/HTTP.
+5. **Publish to ASI:One**:
+   - In Agentverse, navigate to **Agent Details -> Discoverability**.
+   - Paste the contents of `python -m app.main manifest` into the Agentverse agent profile.
+   - Toggle **Public Discoverability** to ON.
+   - Once verified by Agentverse, the agent becomes searchable inside [ASI:One](https://asi.one/).
+
+---
+
+## 5. Fetch-A-Thon Architecture & LLM Disclosure
+- **Framework Compliance**: The agent natively runs on `uagents` (Fetch.ai official Python framework) implementing `AgentChatProtocol:0.3.0` (`uagents_core.contrib.protocols.chat`).
+- **Primary LLM Reasoning**: Cognitive reasoning, tool-calling planning, and real-time grounding are powered by **Groq** (`openai/gpt-oss-120b` with built-in `browser_search`).
+- **ASI:One / ASI1 Transparency**: Groq is not ASI1 and is not claimed to be ASI1. FIA combines Fetch.ai's decentralized agent communication protocol with Groq's ultra-fast reasoning and Exa-powered browser search.

@@ -85,12 +85,12 @@ def test_tool_registry_execution():
     run_async(_test())
 
 
-def test_grok_client_missing_key_fails_cleanly():
+def test_groq_client_missing_key_fails_cleanly():
     async def _test():
         client = GrokClient(api_key="", mock_mode=False)
         with pytest.raises(GrokAPIError) as exc_info:
             await client.generate_response(messages=[{"role": "user", "content": "Hello"}])
-        assert "XAI_API_KEY is not configured" in str(exc_info.value)
+        assert "GROQ_API_KEY is not configured" in str(exc_info.value)
 
     run_async(_test())
 

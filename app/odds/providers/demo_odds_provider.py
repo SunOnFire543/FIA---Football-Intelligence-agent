@@ -22,6 +22,10 @@ class DemoOddsProvider(BaseOddsProvider):
     def provider_name(self) -> str:
         return self._provider_name
 
+    def is_configured(self) -> bool:
+        """Demo odds provider is simulated, not an external live provider."""
+        return False
+
     def _init_quotes(self) -> None:
         t = self._obs_time
 

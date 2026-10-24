@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional
 from pydantic import BaseModel, Field
 
 from app.agent.executor import AgentExecutor
-from app.agent.grok_client import GrokClient
+from app.agent.groq_client import BaseLLMClient, GrokClient
 from app.agent.planner import FOOTBALL_INTELLIGENCE_SYSTEM_PROMPT
 from app.agent.response_builder import ResponseBuilder
 from app.agent.tool_registry import ToolRegistry
@@ -39,15 +39,21 @@ class ACPMessageResponse(BaseModel):
 class FootballACPAgent:
     """Agent implementing Agent Chat Protocol for ASI:One and Agentverse."""
 
-    def __init__(self, grok_client: Optional[GrokClient] = None):
-        self.grok_client = grok_client or GrokClient()
+    def __init__(
+        self,
+        llm_client: Optional[BaseLLMClient] = None,
+        # Backwards compatibility alias
+        grok_client: Optional[BaseLLMClient] = None,
+    ):
+        self.llm_client = llm_client or grok_client or GrokClient()
+        self.grok_client = self.llm_client
         self.tool_registry = ToolRegistry()
         self.tools = FootballIntelligenceTools()
         register_all_tools(self.tool_registry, self.tools)
         self.executor = AgentExecutor(
-            grok_client=self.grok_client,
+            llm_client=self.llm_client,
             tool_registry=self.tool_registry,
-            max_rounds=settings.xai_max_tool_rounds,
+            max_rounds=getattr(settings, "groq_max_tool_rounds", 8),
         )
         self.manifest = get_agent_manifest()
 

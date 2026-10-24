@@ -5,6 +5,7 @@
 *.key
 *.pem
 *.secret
+private_keys.json
 
 # Python artifacts
 __pycache__/

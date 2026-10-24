@@ -19,7 +19,22 @@ else:
 class Settings(BaseModel):
     """Central configuration for Football Intelligence Engine."""
 
-    # xAI / Grok Configuration
+    # Application Operating Mode
+    # "DEMO": Deterministic simulated datasets, labeled explicitly as synthetic.
+    # "LIVE": Connects to live providers with strict validation, rejecting unauthenticated or missing data.
+    data_mode: str = Field(default_factory=lambda: os.getenv("DATA_MODE", "DEMO").upper())
+
+    # Primary LLM Provider: "groq" (default)
+    llm_provider: str = Field(default_factory=lambda: os.getenv("LLM_PROVIDER", "groq").lower())
+
+    # Groq Configuration (Primary LLM & Browser Search)
+    groq_api_key: Optional[str] = Field(default_factory=lambda: os.getenv("GROQ_API_KEY"))
+    groq_model: str = Field(default_factory=lambda: os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"))
+    groq_base_url: str = Field(default_factory=lambda: os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1"))
+    groq_timeout_seconds: float = Field(default_factory=lambda: float(os.getenv("GROQ_TIMEOUT_SECONDS", "60.0")))
+    groq_max_tool_rounds: int = Field(default_factory=lambda: int(os.getenv("GROQ_MAX_TOOL_ROUNDS", "8")))
+
+    # Legacy / Secondary xAI Configuration (Retained for migration reference)
     xai_api_key: Optional[str] = Field(default_factory=lambda: os.getenv("XAI_API_KEY"))
     xai_model: str = Field(default_factory=lambda: os.getenv("XAI_MODEL", "grok-4.7"))
     xai_base_url: str = Field(default_factory=lambda: os.getenv("XAI_BASE_URL", "https://api.x.ai/v1"))
@@ -41,7 +56,7 @@ class Settings(BaseModel):
     # Fetch.ai / Agentverse / ASI:One Configuration
     agentverse_api_key: Optional[str] = Field(default_factory=lambda: os.getenv("AGENTVERSE_API_KEY"))
     agent_name: str = Field(default_factory=lambda: os.getenv("AGENT_NAME", "FootballIntelligenceAgent"))
-    agent_seed: Optional[str] = Field(default_factory=lambda: os.getenv("AGENT_SEED", "football_intelligence_seed_phrase"))
+    agent_seed: Optional[str] = Field(default_factory=lambda: os.getenv("AGENT_SEED") or None)
     agent_port: int = Field(default_factory=lambda: int(os.getenv("AGENT_PORT", "8000")))
     agent_endpoint: str = Field(default_factory=lambda: os.getenv("AGENT_ENDPOINT", "http://127.0.0.1:8000/submit"))
 
@@ -55,6 +70,10 @@ class Settings(BaseModel):
     parlay_5_leg_min_prob: float = Field(default_factory=lambda: float(os.getenv("PARLAY_5_LEG_MIN_PROB", "0.70")))
     parlay_10_leg_min_prob: float = Field(default_factory=lambda: float(os.getenv("PARLAY_10_LEG_MIN_PROB", "0.60")))
     max_parlay_legs: int = Field(default_factory=lambda: int(os.getenv("MAX_PARLAY_LEGS", "10")))
+
+    def is_live_mode(self) -> bool:
+        """Return True if application is running in LIVE production mode."""
+        return self.data_mode == "LIVE"
 
     # Security: Ensure sensitive fields are never printed or leaked in str() or repr()
     def get_masked_api_key(self, key_name: str) -> str:

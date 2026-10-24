@@ -34,6 +34,10 @@ class DemoFootballDataProvider(BaseFootballDataProvider):
     def provider_name(self) -> str:
         return self._provider_name
 
+    def is_configured(self) -> bool:
+        """Demo provider is synthetic test data, not an external live provider."""
+        return False
+
     def _init_data(self) -> None:
         # Competitions
         self.competitions = [
@@ -312,12 +316,14 @@ class DemoFootballDataProvider(BaseFootballDataProvider):
         for fix in self.upcoming_fixtures:
             if competition_id and fix.competition_id != competition_id.upper():
                 continue
+            h_low = fix.home_team_name.lower()
+            a_low = fix.away_team_name.lower()
+            fid_low = fix.fixture_id.lower()
             if (
-                q in fix.home_team_name.lower()
-                or q in fix.away_team_name.lower()
-                or q in fix.fixture_id.lower()
-                or (q in "arsenal" and "arsenal" in fix.home_team_name.lower())
-                or (q in "chelsea" and "chelsea" in fix.away_team_name.lower())
+                q in h_low
+                or q in a_low
+                or q in fid_low
+                or any(word in h_low or word in a_low for word in q.split() if len(word) >= 4)
             ):
                 matches.append(fix)
         return matches

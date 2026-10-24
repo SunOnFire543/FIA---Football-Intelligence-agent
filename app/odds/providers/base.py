@@ -16,6 +16,11 @@ class BaseOddsProvider(ABC):
         pass
 
     @abstractmethod
+    def is_configured(self) -> bool:
+        """Check if provider credentials are configured for live data."""
+        pass
+
+    @abstractmethod
     def get_current_odds(self, fixture_id: str) -> List[BookmakerQuote]:
         """Retrieve current active bookmaker odds for a fixture."""
         pass

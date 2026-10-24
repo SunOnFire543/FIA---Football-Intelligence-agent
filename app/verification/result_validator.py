@@ -13,6 +13,8 @@ from app.schemas.models import (
     MatchPredictionSummary,
     ParlayCandidate,
     ValueOpportunity,
+    WebResearchRecord,
+    WebSourceEvidence,
 )
 
 
@@ -29,6 +31,8 @@ class ResultValidator:
         parlay_5: Optional[ParlayCandidate],
         parlay_10: Optional[ParlayCandidate],
         data_cutoff: datetime,
+        web_sources: Optional[List[WebSourceEvidence]] = None,
+        research_records: Optional[List[WebResearchRecord]] = None,
     ) -> CompactEvidenceRecord:
         """Run systematic integrity checks across all analytical outputs."""
         warnings: List[str] = []
@@ -77,6 +81,21 @@ class ResultValidator:
                 warnings.append(f"Parlay B joint probability out of bounds: {parlay_10.joint_probability}")
                 is_passed = False
 
+        # 4. Web sources and citation integrity checks
+        valid_web_sources: List[WebSourceEvidence] = []
+        if web_sources:
+            for s in web_sources:
+                if not s.url or not (s.url.startswith("http://") or s.url.startswith("https://")):
+                    warnings.append(f"Invalid web source URL: '{s.url}' must begin with http:// or https://")
+                    is_passed = False
+                elif not s.claim_supported or not s.claim_supported.strip():
+                    warnings.append(f"Web source {s.url} missing supported claim context")
+                    is_passed = False
+                else:
+                    valid_web_sources.append(s)
+                if s.freshness_warning:
+                    warnings.append(f"Freshness notice for {s.domain}: {s.freshness_warning}")
+
         record = CompactEvidenceRecord(
             record_id=f"EVID_{uuid.uuid4().hex[:10]}",
             fixture_id=fixture_id,
@@ -90,6 +109,8 @@ class ResultValidator:
             coverage_status=CoverageStatus.AVAILABLE,
             verification_passed=is_passed,
             verification_warnings=warnings,
+            web_sources=valid_web_sources,
+            research_records=research_records or [],
         )
 
         return record

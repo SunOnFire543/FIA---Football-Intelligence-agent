@@ -12,6 +12,8 @@ from app.schemas.enums import (
     ModelStatus,
     ParlayType,
     SelectionOutcome,
+    SourceCategory,
+    VerificationStatus,
 )
 
 
@@ -267,6 +269,31 @@ class ParlayCandidate(BaseModel):
 # Verification & Evidence Record
 # -----------------------------------------------------------------------------
 
+class WebSourceEvidence(BaseModel):
+    """Traceable, categorized web source with quality score and freshness audit."""
+    url: str
+    title: Optional[str] = None
+    publisher: Optional[str] = None
+    domain: str
+    retrieved_at: datetime = Field(default_factory=datetime.utcnow)
+    published_at: Optional[datetime] = None
+    claim_supported: str
+    category: SourceCategory = SourceCategory.SECONDARY_REPORTING
+    verification_status: VerificationStatus = VerificationStatus.REPORTED
+    freshness_warning: Optional[str] = None
+    inline_reference_id: Optional[str] = None  # e.g. "[1]"
+
+
+class WebResearchRecord(BaseModel):
+    """Container for a selective web research query and its corroborated findings."""
+    query: str
+    search_reason: str
+    executed_at: datetime = Field(default_factory=datetime.utcnow)
+    sources: List[WebSourceEvidence] = Field(default_factory=list)
+    summary: str = ""
+    material_conflicts: List[str] = Field(default_factory=list)
+
+
 class CompactEvidenceRecord(BaseModel):
     """Tamper-evident audit trail linking predictions to factual records."""
     record_id: str
@@ -281,6 +308,8 @@ class CompactEvidenceRecord(BaseModel):
     coverage_status: CoverageStatus
     verification_passed: bool
     verification_warnings: List[str] = Field(default_factory=list)
+    web_sources: List[WebSourceEvidence] = Field(default_factory=list)
+    research_records: List[WebResearchRecord] = Field(default_factory=list)
 
 
 class AgentExecutionPlan(BaseModel):

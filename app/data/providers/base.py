@@ -24,6 +24,11 @@ class BaseFootballDataProvider(ABC):
         pass
 
     @abstractmethod
+    def is_configured(self) -> bool:
+        """Check if provider credentials and network connectivity are configured."""
+        pass
+
+    @abstractmethod
     def search_competitions(self, query: str) -> List[CompetitionInfo]:
         """Search available competitions by keyword or country."""
         pass

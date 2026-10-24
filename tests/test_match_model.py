@@ -26,9 +26,11 @@ def test_poisson_pmf_and_tau():
 
 def test_score_matrix_sums_to_one():
     model = DixonColesMatchModel()
-    matrix = model.compute_score_matrix(1.65, 1.10)
+    matrix, tail_mass = model.compute_score_matrix(1.65, 1.10)
     total_mass = float(np.sum(matrix))
     assert abs(total_mass - 1.0) < 1e-5
+    # Verify upper tail mass truncation is small (< 1%)
+    assert tail_mass < 0.01
 
 
 def test_dixon_coles_predict_probabilities():

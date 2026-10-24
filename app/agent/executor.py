@@ -11,9 +11,11 @@ import logging
 from typing import Any, Dict, List, Optional, Set
 from pydantic import BaseModel, Field
 
-from app.agent.grok_client import GrokClient, GrokAPIError
+from app.agent.groq_client import BaseLLMClient, GroqClient, GroqAPIError
 from app.agent.tool_registry import ToolRegistry
+from app.agent.web_research import WebEvidenceBuilder, WebResearchPolicy
 from app.config.settings import settings
+from app.schemas.models import WebSourceEvidence
 
 logger = logging.getLogger(__name__)
 
@@ -32,23 +34,31 @@ class ExecutionResult(BaseModel):
     """Complete trace and result of agent reasoning and tool loop."""
     final_response: str
     tool_records: List[ToolExecutionRecord] = Field(default_factory=list)
+    citations: List[str] = Field(default_factory=list)
+    web_sources: List[WebSourceEvidence] = Field(default_factory=list)
+    web_search_records: List[Dict[str, Any]] = Field(default_factory=list)
     rounds_executed: int
     terminated_by_limit: bool = False
     circular_loop_detected: bool = False
 
 
 class AgentExecutor:
-    """Manages the interactive multi-turn tool-calling loop between Grok and tools."""
+    """Manages the interactive multi-turn tool-calling loop between Groq and tools."""
 
     def __init__(
         self,
-        grok_client: GrokClient,
-        tool_registry: ToolRegistry,
+        llm_client: Optional[BaseLLMClient] = None,
+        tool_registry: Optional[ToolRegistry] = None,
         max_rounds: Optional[int] = None,
+        enable_web_search: bool = True,
+        # Backwards compatibility alias
+        grok_client: Optional[BaseLLMClient] = None,
     ):
-        self.grok_client = grok_client
-        self.tool_registry = tool_registry
-        self.max_rounds = max_rounds or settings.xai_max_tool_rounds
+        self.llm_client = llm_client or grok_client or GroqClient()
+        self.grok_client = self.llm_client  # Compatibility alias
+        self.tool_registry = tool_registry or ToolRegistry()
+        self.max_rounds = max_rounds or getattr(settings, "groq_max_tool_rounds", 8)
+        self.enable_web_search = enable_web_search
 
     def run_sync(
         self,
@@ -74,8 +84,14 @@ class AgentExecutor:
             messages.extend(context_messages)
         messages.append({"role": "user", "content": user_message})
 
+        # Check selective web research policy
+        should_search, search_reason, _ = WebResearchPolicy.should_research(user_message)
+        use_web_search = self.enable_web_search and should_search
+
         tool_schemas = self.tool_registry.get_openai_tool_schemas()
         tool_records: List[ToolExecutionRecord] = []
+        accumulated_citations: List[str] = []
+        accumulated_web_search_records: List[Dict[str, Any]] = []
         seen_calls: Dict[str, int] = {}  # signature -> count for anti-looping
 
         round_idx = 0
@@ -88,24 +104,36 @@ class AgentExecutor:
             logger.info(f"Agent reasoning round {round_idx}/{self.max_rounds}")
 
             try:
-                response = await self.grok_client.generate_response(
+                response = await self.llm_client.generate_response(
                     messages=messages,
                     tools=tool_schemas if tool_schemas else None,
+                    enable_web_search=use_web_search,
                 )
-            except GrokAPIError as exc:
-                logger.error(f"Grok API error during round {round_idx}: {exc}")
+            except GroqAPIError as exc:
+                logger.error(f"Groq API error during round {round_idx}: {exc}")
                 return ExecutionResult(
                     final_response=f"Error executing agent workflow: {str(exc)}",
                     tool_records=tool_records,
+                    citations=accumulated_citations,
                     rounds_executed=round_idx,
                     terminated_by_limit=True,
                 )
+
+            # Collect citations and server-side search activities from Groq response
+            round_citations = response.get("citations") or []
+            for c in round_citations:
+                if c not in accumulated_citations:
+                    accumulated_citations.append(c)
+
+            round_ws = response.get("executed_tools") or response.get("web_search_calls") or []
+            for ws in round_ws:
+                accumulated_web_search_records.append(ws)
 
             tool_calls = response.get("tool_calls")
             assistant_content = response.get("content")
 
             if not tool_calls:
-                # Grok completed reasoning and provided final synthesis
+                # Groq completed reasoning and provided final synthesis
                 final_text = assistant_content or "Analysis completed with no additional comments."
                 break
 
@@ -173,9 +201,21 @@ class AgentExecutor:
                 "Returning preliminary findings."
             )
 
+        web_sources = [
+            WebEvidenceBuilder.create_evidence(
+                url=c,
+                claim_supported="Contextual information examined during Groq web research",
+                inline_id=f"[{idx + 1}]",
+            )
+            for idx, c in enumerate(accumulated_citations)
+        ]
+
         return ExecutionResult(
             final_response=final_text,
             tool_records=tool_records,
+            citations=accumulated_citations,
+            web_sources=web_sources,
+            web_search_records=accumulated_web_search_records,
             rounds_executed=round_idx,
             terminated_by_limit=terminated_by_limit,
             circular_loop_detected=circular_loop_detected,

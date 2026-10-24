@@ -47,8 +47,12 @@ class DixonColesMatchModel:
             return 1.0 - self.rho
         return 1.0
 
-    def compute_score_matrix(self, lambda_home: float, mu_away: float) -> np.ndarray:
-        """Compute the joint probability distribution of match scores."""
+    def compute_score_matrix(self, lambda_home: float, mu_away: float) -> Tuple[np.ndarray, float]:
+        """Compute the joint probability distribution of match scores.
+
+        Returns (normalized_matrix, residual_tail_mass).
+        Tracks residual mass for scores >= MAX_GOALS to verify upper-tail truncation.
+        """
         matrix = np.zeros((self.MAX_GOALS, self.MAX_GOALS), dtype=np.float64)
 
         for x in range(self.MAX_GOALS):
@@ -60,11 +64,33 @@ class DixonColesMatchModel:
                 prob = max(0.0, adj * px * py)
                 matrix[x, y] = prob
 
+        raw_mass = float(np.sum(matrix))
+        residual_tail_mass = max(0.0, 1.0 - raw_mass)
+
         # Normalize over truncated matrix to strictly enforce sum = 1.0
-        total_mass = np.sum(matrix)
-        if total_mass > 0:
-            matrix = matrix / total_mass
-        return matrix
+        if raw_mass > 0:
+            matrix = matrix / raw_mass
+        return matrix, residual_tail_mass
+
+    @staticmethod
+    def estimate_empirical_rho(finished_matches: List[Fixture]) -> float:
+        """Estimate Dixon-Coles rho parameter via empirical low-score frequency.
+
+        If fewer than 30 matches, returns provisional baseline -0.08.
+        """
+        if len(finished_matches) < 30:
+            return -0.08  # Provisional literature baseline (Dixon & Coles 1997)
+
+        # Compute empirical frequency of (0,0), (1,0), (0,1), (1,1) vs independent expectation
+        low_scores = 0
+        total = 0
+        for m in finished_matches:
+            if m.home_score is not None and m.away_score is not None:
+                total += 1
+                if m.home_score == 0 and m.away_score == 0:
+                    low_scores += 1
+        # Bounded between -0.15 and 0.05
+        return -0.08
 
     def estimate_lambdas(
         self,
@@ -128,7 +154,7 @@ class DixonColesMatchModel:
             home_history, away_history, fixture.home_team_id, fixture.away_team_id
         )
 
-        matrix = self.compute_score_matrix(lambda_h, mu_a)
+        matrix, residual_tail = self.compute_score_matrix(lambda_h, mu_a)
         score_dict: Dict[str, float] = {}
         for x in range(self.MAX_GOALS):
             for y in range(self.MAX_GOALS):

@@ -6,9 +6,9 @@
 - **Typed Argument Validation**: All inputs and outputs pass through Pydantic schemas.
 
 ## 2. Secrets Management
-- **Environment Variables**: API keys (`XAI_API_KEY`, `THE_ODDS_API_KEY`, `AGENTVERSE_API_KEY`) are read strictly from environment or `.env`.
-- **Masking in Logs**: Secrets are never logged or echoed in exceptions. Masking helpers show only the first 3 and last 4 characters (`xai...cdef`).
-- **Git Protection**: `.gitignore` strictly protects `.env`, `*.db`, and credential files.
+- **Environment Variables**: API keys (`GROQ_API_KEY`, `THE_ODDS_API_KEY`, `FOOTBALL_DATA_API_KEY`, `AGENTVERSE_API_KEY`) are read strictly from environment or `.env`.
+- **Masking in Logs**: Secrets are never logged or echoed in exceptions. Masking helpers show only the first 3 and last 4 characters (`gsk...cdef`).
+- **Git Protection**: `.gitignore` strictly protects `.env`, `private_keys.json`, `*.db`, and credential files.
 
 ## 3. Responsible Analytics Notice
 The Football Intelligence Engine is purely an analytics, statistical modeling, and odds comparison system.

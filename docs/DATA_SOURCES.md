@@ -15,6 +15,12 @@
 | **Demo Odds Provider** | Multi-Bookmaker Baseline | Verified quotes (Bet365, Pinnacle, Unibet) | **Active & Verified** | Realistically priced quotes across 1X2, Totals, DC, BTTS, Player props. |
 | **The Odds API** | Live Aggregated Odds | `/sports/{sport}/odds` | **Implemented** | Active API key supported. Normalises decimal odds and margins. |
 
+### 1.3 Web Intelligence & Grounding Providers
+| Provider | Role | Integration | Status | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| **Groq Browser Search** | Real-Time News & Citations | Built-in `browser_search` (`openai/gpt-oss-120b`) | **Active & Verified** | Live web search executed on Groq infrastructure. Automatic citations extraction and source hierarchy classification. |
+| **Source Classifier** | Evidentiary Quality Audit | Local approved-source registry | **Active & Verified** | Post-search validation into Tier 1 (Official), Tier 2 (Licensed Data), Tier 3 (Established Publications), and Tier 4/5 (Secondary/Community). |
+
 ---
 
 ## 2. Adapter Pattern
